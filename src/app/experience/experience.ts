@@ -1,4 +1,5 @@
 import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectionStrategy, Component } from '@angular/core';
+import { NgtsOrbitControls } from 'angular-three-soba/controls';
 import { NgtsEnvironment } from 'angular-three-soba/staging';
 import { Avatar } from './avatar';
 import { Background } from './background';
@@ -14,6 +15,6 @@ import { Background } from './background';
   `,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Avatar, NgtsEnvironment, Background],
+  imports: [Avatar, NgtsEnvironment, Background, NgtsOrbitControls],
 })
 export class Experience {}

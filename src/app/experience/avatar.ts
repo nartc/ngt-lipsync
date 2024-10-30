@@ -5,16 +5,26 @@ Command: npx angular-three-gltf&#64;1.0.5 public/67219b35aa658e812daccbd7.glb -o
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   CUSTOM_ELEMENTS_SCHEMA,
   effect,
   ElementRef,
   inject,
   input,
+  signal,
   Signal,
   viewChild,
 } from '@angular/core';
-import { extend, NgtArgs, NgtGroup, NgtObjectEvents } from 'angular-three';
-import { injectGLTF } from 'angular-three-soba/loaders';
+import {
+  extend,
+  NgtArgs,
+  NgtGroup,
+  NgtObjectEvents,
+  NgtObjectEventsInputs,
+  NgtObjectEventsOutputs,
+} from 'angular-three';
+import { injectFBX, injectGLTF } from 'angular-three-soba/loaders';
+import { injectAnimations } from 'angular-three-soba/misc';
 import type * as THREE from 'three';
 import { Group, SkinnedMesh } from 'three';
 import { GLTF } from 'three-stdlib';
@@ -50,91 +60,73 @@ type GLTFResult = GLTF & {
   template: `
     @if (gltf(); as gltf) {
       <ngt-group #model [parameters]="options()">
-        <ngt-primitive *args="[gltf.nodes.Hips]" />
-        <ngt-skinned-mesh
-          [geometry]="gltf.nodes.Wolf3D_Headwear.geometry"
-          [material]="gltf.materials.Wolf3D_Headwear"
-          [skeleton]="gltf.nodes.Wolf3D_Headwear.skeleton"
-        />
-        <ngt-skinned-mesh
-          [geometry]="gltf.nodes.Wolf3D_Body.geometry"
-          [material]="gltf.materials.Wolf3D_Body"
-          [skeleton]="gltf.nodes.Wolf3D_Body.skeleton"
-        />
-        <ngt-skinned-mesh
-          [geometry]="gltf.nodes.Wolf3D_Outfit_Bottom.geometry"
-          [material]="gltf.materials.Wolf3D_Outfit_Bottom"
-          [skeleton]="gltf.nodes.Wolf3D_Outfit_Bottom.skeleton"
-        />
-        <ngt-skinned-mesh
-          [geometry]="gltf.nodes.Wolf3D_Outfit_Footwear.geometry"
-          [material]="gltf.materials.Wolf3D_Outfit_Footwear"
-          [skeleton]="gltf.nodes.Wolf3D_Outfit_Footwear.skeleton"
-        />
-        <ngt-skinned-mesh
-          [geometry]="gltf.nodes.Wolf3D_Outfit_Top.geometry"
-          [material]="gltf.materials.Wolf3D_Outfit_Top"
-          [skeleton]="gltf.nodes.Wolf3D_Outfit_Top.skeleton"
-        />
-        <ngt-skinned-mesh
-          name="EyeLeft"
-          [geometry]="gltf.nodes.EyeLeft.geometry"
-          [material]="gltf.materials.Wolf3D_Eye"
-          [skeleton]="gltf.nodes.EyeLeft.skeleton"
-          [morphTargetDictionary]="gltf.nodes.EyeLeft.morphTargetDictionary"
-          [morphTargetInfluences]="gltf.nodes.EyeLeft.morphTargetInfluences"
-        />
-        <ngt-skinned-mesh
-          name="EyeRight"
-          [geometry]="gltf.nodes.EyeRight.geometry"
-          [material]="gltf.materials.Wolf3D_Eye"
-          [skeleton]="gltf.nodes.EyeRight.skeleton"
-          [morphTargetDictionary]="gltf.nodes.EyeRight.morphTargetDictionary"
-          [morphTargetInfluences]="gltf.nodes.EyeRight.morphTargetInfluences"
-        />
-        <ngt-skinned-mesh
-          name="Wolf3D_Head"
-          [geometry]="gltf.nodes.Wolf3D_Head.geometry"
-          [material]="gltf.materials.Wolf3D_Skin"
-          [skeleton]="gltf.nodes.Wolf3D_Head.skeleton"
-          [morphTargetDictionary]="gltf.nodes.Wolf3D_Head.morphTargetDictionary"
-          [morphTargetInfluences]="gltf.nodes.Wolf3D_Head.morphTargetInfluences"
-        />
-        <ngt-skinned-mesh
-          name="Wolf3D_Teeth"
-          [geometry]="gltf.nodes.Wolf3D_Teeth.geometry"
-          [material]="gltf.materials.Wolf3D_Teeth"
-          [skeleton]="gltf.nodes.Wolf3D_Teeth.skeleton"
-          [morphTargetDictionary]="gltf.nodes.Wolf3D_Teeth.morphTargetDictionary"
-          [morphTargetInfluences]="gltf.nodes.Wolf3D_Teeth.morphTargetInfluences"
-        />
+        <ngt-group name="Armature" [userData]="{ name: 'Armature' }">
+          <ngt-primitive #bone *args="[gltf.nodes.Hips]" />
+          <ngt-skinned-mesh
+            [geometry]="gltf.nodes.Wolf3D_Headwear.geometry"
+            [material]="gltf.materials.Wolf3D_Headwear"
+            [skeleton]="gltf.nodes.Wolf3D_Headwear.skeleton"
+          />
+          <ngt-skinned-mesh
+            [geometry]="gltf.nodes.Wolf3D_Body.geometry"
+            [material]="gltf.materials.Wolf3D_Body"
+            [skeleton]="gltf.nodes.Wolf3D_Body.skeleton"
+          />
+          <ngt-skinned-mesh
+            [geometry]="gltf.nodes.Wolf3D_Outfit_Bottom.geometry"
+            [material]="gltf.materials.Wolf3D_Outfit_Bottom"
+            [skeleton]="gltf.nodes.Wolf3D_Outfit_Bottom.skeleton"
+          />
+          <ngt-skinned-mesh
+            [geometry]="gltf.nodes.Wolf3D_Outfit_Footwear.geometry"
+            [material]="gltf.materials.Wolf3D_Outfit_Footwear"
+            [skeleton]="gltf.nodes.Wolf3D_Outfit_Footwear.skeleton"
+          />
+          <ngt-skinned-mesh
+            [geometry]="gltf.nodes.Wolf3D_Outfit_Top.geometry"
+            [material]="gltf.materials.Wolf3D_Outfit_Top"
+            [skeleton]="gltf.nodes.Wolf3D_Outfit_Top.skeleton"
+          />
+          <ngt-skinned-mesh
+            name="EyeLeft"
+            [geometry]="gltf.nodes.EyeLeft.geometry"
+            [material]="gltf.materials.Wolf3D_Eye"
+            [skeleton]="gltf.nodes.EyeLeft.skeleton"
+            [morphTargetDictionary]="gltf.nodes.EyeLeft.morphTargetDictionary"
+            [morphTargetInfluences]="gltf.nodes.EyeLeft.morphTargetInfluences"
+          />
+          <ngt-skinned-mesh
+            name="EyeRight"
+            [geometry]="gltf.nodes.EyeRight.geometry"
+            [material]="gltf.materials.Wolf3D_Eye"
+            [skeleton]="gltf.nodes.EyeRight.skeleton"
+            [morphTargetDictionary]="gltf.nodes.EyeRight.morphTargetDictionary"
+            [morphTargetInfluences]="gltf.nodes.EyeRight.morphTargetInfluences"
+          />
+          <ngt-skinned-mesh
+            name="Wolf3D_Head"
+            [geometry]="gltf.nodes.Wolf3D_Head.geometry"
+            [material]="gltf.materials.Wolf3D_Skin"
+            [skeleton]="gltf.nodes.Wolf3D_Head.skeleton"
+            [morphTargetDictionary]="gltf.nodes.Wolf3D_Head.morphTargetDictionary"
+            [morphTargetInfluences]="gltf.nodes.Wolf3D_Head.morphTargetInfluences"
+          />
+          <ngt-skinned-mesh
+            name="Wolf3D_Teeth"
+            [geometry]="gltf.nodes.Wolf3D_Teeth.geometry"
+            [material]="gltf.materials.Wolf3D_Teeth"
+            [skeleton]="gltf.nodes.Wolf3D_Teeth.skeleton"
+            [morphTargetDictionary]="gltf.nodes.Wolf3D_Teeth.morphTargetDictionary"
+            [morphTargetInfluences]="gltf.nodes.Wolf3D_Teeth.morphTargetInfluences"
+          />
+        </ngt-group>
 
         <ng-content />
       </ngt-group>
     }
   `,
   imports: [NgtArgs],
-  hostDirectives: [
-    {
-      directive: NgtObjectEvents,
-      inputs: ['ngtObjectEvents'],
-      outputs: [
-        'click',
-        'dblclick',
-        'contextmenu',
-        'pointerup',
-        'pointerdown',
-        'pointerover',
-        'pointerout',
-        'pointerenter',
-        'pointerleave',
-        'pointermove',
-        'pointermissed',
-        'pointercancel',
-        'wheel',
-      ],
-    },
-  ],
+  hostDirectives: [{ directive: NgtObjectEvents, inputs: NgtObjectEventsInputs, outputs: NgtObjectEventsOutputs }],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -143,7 +135,7 @@ export class Avatar {
 
   options = input({} as Partial<NgtGroup>);
 
-  modelRef = viewChild<ElementRef<Group>>('model');
+  private modelRef = viewChild<ElementRef<Group>>('model');
 
   protected gltf = injectGLTF(() => '/67219b35aa658e812daccbd7-transformed.glb', {
     useDraco: true,
@@ -151,8 +143,41 @@ export class Avatar {
 
   private objectEvents = inject(NgtObjectEvents, { host: true });
 
+  private fbxModels = injectFBX(() => ({
+    ['Breathing']: './Breathing Idle.fbx',
+    ['Stretching']: './Arm Stretching.fbx',
+  }));
+  private fbxAnimations = computed(() => {
+    const models = this.fbxModels();
+    if (!models) return null;
+    const breathingIdle = models.Breathing.animations[0];
+    breathingIdle.name = 'Breathing';
+
+    const armStretching = models.Stretching.animations[0];
+    armStretching.name = 'Stretching';
+
+    return [breathingIdle, armStretching];
+  });
+
+  private animations = injectAnimations(this.fbxAnimations, this.modelRef);
+
+  private animation = signal('Breathing');
+
   constructor() {
     extend({ Group, SkinnedMesh });
+
+    effect((onCleanup) => {
+      if (!this.animations.ready()) return;
+
+      const action = this.animations.actions[this.animation()];
+      if (!action) return;
+
+      // TODO: not sure why fadeIn doesn't work
+      //  action.reset().fadeIn(0.5).play();
+      action.reset().play();
+
+      onCleanup(() => action.fadeOut(0.5));
+    });
 
     effect(
       () => {
