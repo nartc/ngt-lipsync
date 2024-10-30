@@ -1,0 +1,58 @@
+{
+  "name": "ngt-template",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^18.2.9",
+    "@angular/common": "^18.2.9",
+    "@angular/compiler": "^18.2.9",
+    "@angular/core": "^18.2.9",
+    "@angular/forms": "^18.2.9",
+    "@angular/platform-browser": "^18.2.9",
+    "@angular/platform-browser-dynamic": "^18.2.9",
+    "@angular/router": "^18.2.9",
+    "@monogrid/gainmap-js": "^3.0.6",
+    "@pmndrs/vanilla": "^1.19.3",
+    "angular-three": "^2.5.2",
+    "angular-three-soba": "^2.5.2",
+    "camera-controls": "^2.9.0",
+    "maath": "^0.10.8",
+    "ngxtension": "^4.0.0",
+    "rxjs": "~7.8.1",
+    "stats-gl": "^2.2.8",
+    "three": "^0.169.0",
+    "three-custom-shader-material": "^6.0.13",
+    "three-mesh-bvh": "^0.8.2",
+    "three-stdlib": "^2.33.0",
+    "troika-three-text": "^0.50.2",
+    "tslib": "^2.8.0",
+    "zone.js": "~0.14.10"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^18.2.9",
+    "@angular/cli": "^18.2.9",
+    "@angular/compiler-cli": "^18.2.9",
+    "@types/three": "^0.169.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "tailwindcss": "^3.4.14",
+    "typescript": "~5.5.4"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "htmlWhitespaceSensitivity": "ignore",
+    "plugins": [
+      "prettier-plugin-organize-imports",
+      "prettier-plugin-tailwindcss"
+    ]
+  }
+}
