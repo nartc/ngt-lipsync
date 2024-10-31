@@ -17,6 +17,7 @@ import {
 } from '@angular/core';
 import {
   extend,
+  injectBeforeRender,
   NgtArgs,
   NgtGroup,
   NgtObjectEvents,
@@ -26,8 +27,9 @@ import {
 import { injectFBX, injectGLTF } from 'angular-three-soba/loaders';
 import { injectAnimations } from 'angular-three-soba/misc';
 import type * as THREE from 'three';
-import { Group, SkinnedMesh } from 'three';
+import { Bone, Group, SkinnedMesh } from 'three';
 import { GLTF } from 'three-stdlib';
+import { playAudio } from '../play-audio';
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -52,6 +54,18 @@ type GLTFResult = GLTF & {
     Wolf3D_Skin: THREE.MeshStandardMaterial;
     Wolf3D_Teeth: THREE.MeshStandardMaterial;
   };
+};
+
+const mouthCuesMap: Record<string, string> = {
+  A: 'viseme_PP',
+  B: 'viseme_kk',
+  C: 'viseme_I',
+  D: 'viseme_aa',
+  E: 'viseme_O',
+  F: 'viseme_U',
+  G: 'viseme_FF',
+  H: 'viseme_TH',
+  X: 'viseme_PP',
 };
 
 @Component({
@@ -136,6 +150,7 @@ export class Avatar {
   options = input({} as Partial<NgtGroup>);
 
   private modelRef = viewChild<ElementRef<Group>>('model');
+  private boneRef = viewChild<ElementRef<Bone>>('bone');
 
   protected gltf = injectGLTF(() => '/67219b35aa658e812daccbd7-transformed.glb', {
     useDraco: true,
@@ -143,39 +158,96 @@ export class Avatar {
 
   private objectEvents = inject(NgtObjectEvents, { host: true });
 
-  private fbxModels = injectFBX(() => ({
-    ['Breathing']: './Breathing Idle.fbx',
-    ['Stretching']: './Arm Stretching.fbx',
-  }));
-  private fbxAnimations = computed(() => {
-    const models = this.fbxModels();
-    if (!models) return null;
-    const breathingIdle = models.Breathing.animations[0];
-    breathingIdle.name = 'Breathing';
-
-    const armStretching = models.Stretching.animations[0];
-    armStretching.name = 'Stretching';
-
-    return [breathingIdle, armStretching];
-  });
-
-  private animations = injectAnimations(this.fbxAnimations, this.modelRef);
-
-  private animation = signal('Breathing');
-
   constructor() {
     extend({ Group, SkinnedMesh });
 
-    effect((onCleanup) => {
-      if (!this.animations.ready()) return;
+    const fbxModels = injectFBX(() => ({
+      Breathing: './Breathing Idle.fbx',
+      Stretching: './Arm Stretching.fbx',
+    }));
+    const fbxAnimations = computed(() => {
+      const models = fbxModels();
+      if (!models) return null;
 
-      const action = this.animations.actions[this.animation()];
+      const breathingIdle = models.Breathing.animations[0];
+      breathingIdle.name = 'Breathing';
+
+      const armStretching = models.Stretching.animations[0];
+      armStretching.name = 'Stretching';
+
+      return [breathingIdle, armStretching];
+    });
+
+    const animationHost = computed(() => (this.boneRef() ? this.modelRef() : null));
+    const animations = injectAnimations(fbxAnimations, animationHost);
+
+    const lipSync = signal<Record<string, any> | null>(null);
+    const animation = signal('Stretching');
+    const audio = new Audio('/nx-cloud-speech.mp3');
+
+    injectBeforeRender(() => {
+      const [_lipSync, gltf] = [lipSync(), this.gltf()];
+      if (!_lipSync || !gltf) return;
+
+      if (!playAudio()) return;
+
+      if (!('mouthCues' in _lipSync)) return;
+
+      const head = gltf.nodes.Wolf3D_Head;
+      const teeth = gltf.nodes.Wolf3D_Teeth;
+
+      if (
+        !head.morphTargetInfluences ||
+        !head.morphTargetDictionary ||
+        !teeth.morphTargetDictionary ||
+        !teeth.morphTargetInfluences
+      )
+        return;
+
+      const { morphTargetDictionary: headTargetDictionary, morphTargetInfluences: headTargetInfluences } = head;
+      const { morphTargetDictionary: teethTargetDictionary, morphTargetInfluences: teethTargetInfluences } = teeth;
+
+      Object.values(mouthCuesMap).forEach((target) => {
+        headTargetInfluences[headTargetDictionary[target]] = 0;
+        teethTargetInfluences[teethTargetDictionary[target]] = 0;
+      });
+
+      const currentAudioTime = audio.currentTime;
+      for (let i = 0; i < _lipSync['mouthCues'].length; i++) {
+        const mouthCue = _lipSync['mouthCues'][i];
+        if (mouthCue.start <= currentAudioTime && mouthCue.end >= currentAudioTime) {
+          headTargetInfluences[headTargetDictionary[mouthCuesMap[mouthCue.value]]] = 1;
+          teethTargetInfluences[teethTargetDictionary[mouthCuesMap[mouthCue.value]]] = 1;
+          break;
+        }
+      }
+    });
+
+    effect(() => {
+      fetch('/nx-cloud-speech.json')
+        .then((res) => res.json())
+        .then((json) => {
+          lipSync.set(json);
+        });
+    });
+
+    effect(() => {
+      if (!playAudio()) {
+        audio.pause();
+      } else {
+        void audio.play();
+      }
+    });
+
+    effect((onCleanup) => {
+      if (!animations.ready()) return;
+
+      const action = animations.actions[animation()];
       if (!action) return;
 
       // TODO: not sure why fadeIn doesn't work
-      //  action.reset().fadeIn(0.5).play();
+      // action.reset().fadeIn(0.5).play();
       action.reset().play();
-
       onCleanup(() => action.fadeOut(0.5));
     });
 
