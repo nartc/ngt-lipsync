@@ -30,6 +30,7 @@ import type * as THREE from 'three';
 import { Bone, Group, SkinnedMesh } from 'three';
 import { GLTF } from 'three-stdlib';
 import { playAudio } from '../play-audio';
+import lipSync from './nx-cloud-speech.json';
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -152,7 +153,7 @@ export class Avatar {
   private modelRef = viewChild<ElementRef<Group>>('model');
   private boneRef = viewChild<ElementRef<Bone>>('bone');
 
-  protected gltf = injectGLTF(() => '/67219b35aa658e812daccbd7-transformed.glb', {
+  protected gltf = injectGLTF(() => './67219b35aa658e812daccbd7-transformed.glb', {
     useDraco: true,
   }) as unknown as Signal<GLTFResult | null>;
 
@@ -181,17 +182,16 @@ export class Avatar {
     const animationHost = computed(() => (this.boneRef() ? this.modelRef() : null));
     const animations = injectAnimations(fbxAnimations, animationHost);
 
-    const lipSync = signal<Record<string, any> | null>(null);
     const animation = signal('Stretching');
     const audio = new Audio('/nx-cloud-speech.mp3');
 
     injectBeforeRender(() => {
-      const [_lipSync, gltf] = [lipSync(), this.gltf()];
-      if (!_lipSync || !gltf) return;
+      const gltf = this.gltf();
+      if (!gltf) return;
 
       if (!playAudio()) return;
 
-      if (!('mouthCues' in _lipSync)) return;
+      if (!('mouthCues' in lipSync)) return;
 
       const head = gltf.nodes.Wolf3D_Head;
       const teeth = gltf.nodes.Wolf3D_Teeth;
@@ -213,22 +213,14 @@ export class Avatar {
       });
 
       const currentAudioTime = audio.currentTime;
-      for (let i = 0; i < _lipSync['mouthCues'].length; i++) {
-        const mouthCue = _lipSync['mouthCues'][i];
+      for (let i = 0; i < lipSync['mouthCues'].length; i++) {
+        const mouthCue = lipSync['mouthCues'][i];
         if (mouthCue.start <= currentAudioTime && mouthCue.end >= currentAudioTime) {
           headTargetInfluences[headTargetDictionary[mouthCuesMap[mouthCue.value]]] = 1;
           teethTargetInfluences[teethTargetDictionary[mouthCuesMap[mouthCue.value]]] = 1;
           break;
         }
       }
-    });
-
-    effect(() => {
-      fetch('/nx-cloud-speech.json')
-        .then((res) => res.json())
-        .then((json) => {
-          lipSync.set(json);
-        });
     });
 
     effect(() => {
